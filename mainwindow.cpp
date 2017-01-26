@@ -13,6 +13,9 @@ MainWindow::MainWindow(QWidget *parent) :
 {
 
 
+
+
+
     ui->setupUi(this);
     ui->checkBox->setChecked(true);
     refresh_gui_timer = new QTimer(this);
@@ -20,20 +23,38 @@ MainWindow::MainWindow(QWidget *parent) :
 
     createMinimalizeToTry();
     UstawZegar();
-    nazwapliku = "log_file.txt";
+
+
+
+    //setUserDefinedPath();
+    //QDir::setCurrent(QString::fromStdString(default_path));
+//    nazwapliku.append(default_path);
+//    nazwapliku.append("/");
+
+    nazwapliku.append( FILE_NAME_PREFIX+getUserName()+FILE_NAME_SUFFIX);
+    qDebug() << QString::fromStdString(nazwapliku);
+
     this->hide();
     restore->setEnabled(true);
 
     this->setFixedSize(426,336);
-    this->hide();
     this->setVisible(false);
+    this->hide();
+
     refresh_gui_timer->start(timer_period_ms);
 
     zapiszPierwszeWlaczenie(QDateTime::currentDateTime());
+    ui->timeEdit->setTime(time_info->getCzasPrzebywaniaWpracy());
+
+
 
     connect( qApp, SIGNAL( aboutToQuit()),this,SLOT(saveData()));
+    connect(ui->pushButton, SIGNAL(clicked(bool)),this,SLOT(on_manual_time_chaged(bool)));
     connect(refresh_gui_timer, SIGNAL(timeout()), this, SLOT(on_refreshGui()));
 }
+
+
+
 
 MainWindow::~MainWindow()
 {
@@ -47,6 +68,36 @@ MainWindow::~MainWindow()
 }
 
 
+void MainWindow::setUserDefinedPath(){
+
+    QString temp_qstr = QDir::homePath();
+            /*"/" + QStandardPaths::displayName( QStandardPaths::DesktopLocation );
+    qDebug() << temp_qstr;*/
+
+    default_path = temp_qstr.toStdString();
+
+
+
+
+
+    qDebug() << QString::fromStdString(default_path);
+
+    QString m_sSettingsFile = QApplication::applicationDirPath()/*.left(1)*/ + "/settings.ini";
+    QSettings settings(m_sSettingsFile,QSettings::NativeFormat);    // qt linux format
+    settings.beginGroup( GRUPA_USTAWIEN);
+    bool flag = settings.value(FLAG_TO_LET_USE_PATH, false).toBool();
+
+    if(flag == true){
+        default_path = settings.value(PATH_TO_SAVE_FILE, false).toString().toStdString();
+
+    }else {
+        settings.setValue(FLAG_TO_LET_USE_PATH, false);
+        settings.setValue(PATH_TO_SAVE_FILE, QString::fromStdString(default_path));
+    }
+    settings.endGroup();
+
+}
+
 
 void MainWindow::on_refreshGui(){
 
@@ -55,15 +106,14 @@ void MainWindow::on_refreshGui(){
     ui->label_2->setText("Oszacowany czas przybycia do pracy: "+ time_info->getCzasPrzebywaniaWpracy().toString("hh:mm:ss"));
     ui->label_3->setText("Oszacowany czas wejścia na zakład: "+ time_info-> getCzasWejsciaNaZaklad().toString("hh:mm:ss"));
     ui->label_4->setText("Rekomendowana godzina wyjścia z pracy: "+ time_info-> getCzasWyjsciaZPRacy().toString("hh:mm:ss"));
+    QString format = "dddd, d MMMM yyyy";
+    ui->label_6->setText(QDate::currentDate().toString(format) +", "+ QTime::currentTime().toString("hh:mm:ss"));
 }
-
-
 
 
 void MainWindow::UstawZegar(void)
 {
-    QString format = "dddd, d MMMM yyyy";
-    ui->label_6->setText(QDate::currentDate().toString(format) +"     "+ QTime::currentTime().toString("hh:mm:ss"));
+
 }
 void MainWindow::uworzPlik(const char *nazwapliku)
 {
@@ -84,23 +134,24 @@ void MainWindow::otworzPlik(const char *nazwapliku)
 
 void MainWindow::saveData(void)
 {
-    qDebug() << "save data..." << endl;
-    if(fileExists(("log_file.txt"))){
-        qDebug() << "ISTNIEJE" << endl;
-        otworzPlik("log_file.txt");
-        engineApp(false);
-    }
-    else {
-        qDebug() << "NIE ISTNIEJE" << endl;
-        uworzPlik("log_file.txt");
-        otworzPlik("log_file.txt");
-        engineApp(false);
+    if(ui->checkBox->isChecked()){
+        qDebug() << "save data..." << endl;
+        if(fileExists(nazwapliku.c_str())){
+            qDebug() << "ISTNIEJE" << endl;
+            otworzPlik(nazwapliku.c_str());
+            engineApp(false);
+        }
+        else {
+            qDebug() << "NIE ISTNIEJE" << endl;
+            uworzPlik(nazwapliku.c_str());
+            otworzPlik(nazwapliku.c_str());
+            engineApp(false);
+        }
     }
 }
 
 bool MainWindow::fileExists(const char *str)
 {
-
 
     QFileInfo check_file(str);
     // check if file exists and if yes: Is it really a file and no directory?
@@ -141,7 +192,6 @@ void MainWindow::createMinimalizeToTry(void)
 }
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-
     //saveData();
     QApplication::quit();
 }
@@ -218,12 +268,11 @@ void MainWindow::compessFreeTimes(QDateTime first, QDateTime second ){
         if((first.addDays(1) != second)){
             //            qDebug() << "first.addDays(1) != second";
             first.addDays(1);
-                             qDebug() << "first.toString()"  << first.toString();
-                             qDebug() << "second.toString()" << second.toString();
+           //                  qDebug() << "first.toString()"  << first.toString();
+           //                   qDebug() << "second.toString()" << second.toString();
             second = second.addDays(-1);
             first = first.addDays(1);
             second = second.addDays(1);
-
             while(first < second)
             {
                 fout <<"|"<<compensText(first.date().toString().trimmed().toStdString(), 23, 1);
@@ -251,10 +300,10 @@ bool MainWindow::engineApp(bool sel)
 
         QString m_sSettingsFile = QApplication::applicationDirPath()/*.left(1)*/ + "/settings.ini";
         QSettings settings(m_sSettingsFile,QSettings::NativeFormat);    // qt linux format
-        settings.beginGroup( SETTINGS_GRUPA_USTAWIEN);
-        QDateTime temp = settings.value(SETTINGS_PIERWSZE_WLACZENIE_KOMPUTERA, 0).toDateTime();
-        settings.setValue(SETTINGS_DZIEN_OSTATNIEJ_MODYFIKACJI, QDateTime::currentDateTime());
-        settings.setValue(SETTINGS_OSTATNIE_WYLACZENIE_KOMPUTERA, QDateTime::currentDateTime());
+        settings.beginGroup( GRUPA_USTAWIEN);
+        QDateTime temp = settings.value(PIERWSZE_WLACZENIE_KOMPUTERA, 0).toDateTime();
+        settings.setValue(DZIEN_OSTATNIEJ_MODYFIKACJI, QDateTime::currentDateTime());
+        settings.setValue(OSTATNIE_WYLACZENIE_KOMPUTERA, QDateTime::currentDateTime());
         settings.endGroup();
 
         if(was_modyfied){
@@ -289,11 +338,11 @@ void MainWindow::zapiszPierwszeWlaczenie(QDateTime   date_time){
     QString m_sSettingsFile = QApplication::applicationDirPath()/*.left(1)*/ + "/settings.ini";
     qDebug() << m_sSettingsFile;
     QSettings settings(m_sSettingsFile,QSettings::NativeFormat);    // qt linux format
-    settings.beginGroup(SETTINGS_GRUPA_USTAWIEN);
+    settings.beginGroup(GRUPA_USTAWIEN);
 
     if(odczytajPierwszeWlaczenie(QDateTime::currentDateTime()) || !QFileInfo("settings.ini").exists()){    // pierwsze wlaczenie
         qDebug() << "wlaczenie - nowy dzien ";
-        settings.setValue(SETTINGS_PIERWSZE_WLACZENIE_KOMPUTERA, date_time);
+        settings.setValue(PIERWSZE_WLACZENIE_KOMPUTERA, date_time);
         time_info->setWlaczenieKomputera(QTime::currentTime());
         was_modyfied = false;
 
@@ -301,7 +350,7 @@ void MainWindow::zapiszPierwszeWlaczenie(QDateTime   date_time){
     else {  //kolejne wlaczenia
         qDebug() << "kolejne wlaczenie ";
         was_modyfied = true;
-        time_info->setWlaczenieKomputera(settings.value(SETTINGS_PIERWSZE_WLACZENIE_KOMPUTERA, QTime::currentTime()).toTime());
+        time_info->setWlaczenieKomputera(settings.value(PIERWSZE_WLACZENIE_KOMPUTERA, QTime::currentTime()).toTime());
 
     }
     settings.endGroup();
@@ -312,10 +361,10 @@ bool MainWindow::odczytajPierwszeWlaczenie(QDateTime date_time){
     QString m_sSettingsFile = QApplication::applicationDirPath()/*.left(1)*/ + "/settings.ini";
     QSettings settings(m_sSettingsFile,QSettings::NativeFormat);    // qt linux format
 
-    settings.beginGroup( SETTINGS_GRUPA_USTAWIEN);
-    QDateTime temp = settings.value(SETTINGS_PIERWSZE_WLACZENIE_KOMPUTERA, QDateTime::currentDateTime()).toDateTime();
-    last_date_time = new QDateTime(settings.value(SETTINGS_DZIEN_OSTATNIEJ_MODYFIKACJI, QDateTime::currentDateTime()).toDateTime());
-    last_turnoff_computer_time = new QDateTime(settings.value(SETTINGS_OSTATNIE_WYLACZENIE_KOMPUTERA, QDateTime::currentDateTime()).toDateTime());
+    settings.beginGroup( GRUPA_USTAWIEN);
+    QDateTime temp = settings.value(PIERWSZE_WLACZENIE_KOMPUTERA, QDateTime::currentDateTime()).toDateTime();
+    last_date_time = new QDateTime(settings.value(DZIEN_OSTATNIEJ_MODYFIKACJI, QDateTime::currentDateTime()).toDateTime());
+    last_turnoff_computer_time = new QDateTime(settings.value(OSTATNIE_WYLACZENIE_KOMPUTERA, QDateTime::currentDateTime()).toDateTime());
     settings.endGroup();
 
     if(temp.date() == date_time.currentDateTime().date()){
@@ -340,6 +389,25 @@ string MainWindow::compensText(string text, int total_space, int ofset){
     }
     return temp_str;
 }
+
+void MainWindow::on_manual_time_chaged(bool x){
+    qDebug() << "on_manual_time_chaged";
+    if (QMessageBox::question(this, "Czy zmienić godzinę?",
+                      "Napewno chcesz wprowadzić datę manualnie ?") == QMessageBox::Yes){
+       time_info->setWlaczenieKomputera(ui->timeEdit->time());
+    }
+
+}
+
+string MainWindow::getUserName() const{
+
+    QStringList homePath = QStandardPaths::standardLocations(QStandardPaths::HomeLocation);
+    QString QStr = homePath.first().split(QDir::separator()).last();
+    return string(QStr.toStdString());
+
+}
+
+
 
 
 TimeWorkingInfo::TimeWorkingInfo() {

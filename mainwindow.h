@@ -11,7 +11,11 @@
 #include <QTimer>
 #include <QFileInfo>
 #include <QSettings>
-
+#include <QMessageBox>
+#include <QStandardPaths>
+#include <QDesktopServices>
+#include <QStandardPaths>
+#include <QDir>
 #include <fstream>
 #include <iostream>
 #include <stdio.h>
@@ -28,15 +32,16 @@
 #include <QGuiApplication>
 #include <QString>
 
-const QString SETTINGS_GRUPA_USTAWIEN = "settings_first_fun_group";
-const QString SETTINGS_PIERWSZE_WLACZENIE_KOMPUTERA = "first_tun_date_and_time";
-const QString SETTINGS_DZIEN_OSTATNIEJ_MODYFIKACJI = "last_moydifed_date_and_time";
+const QString GRUPA_USTAWIEN = "settings_first_fun_group";
+const QString PIERWSZE_WLACZENIE_KOMPUTERA = "first_tun_date_and_time";
+const QString DZIEN_OSTATNIEJ_MODYFIKACJI = "last_moydifed_date_and_time";
+const QString OSTATNIE_WYLACZENIE_KOMPUTERA = "last_turnoff_computer_time";
 
-const QString SETTINGS_OSTATNIE_WYLACZENIE_KOMPUTERA = "last_turnoff_computer_time";
+const QString FLAG_TO_LET_USE_PATH = "flag_to_let_use_path";
+const QString PATH_TO_SAVE_FILE = "path_to_save_log";
 
-const QString SETTINGS_FLAGA_MODYFIKACJI = "was_modyfication";
-
-const QString SETTINGS_OSTATNIA_POZYCJA_W_PLIKU = "last_fpos_location";
+const std::string FILE_NAME_PREFIX = "CzasPracy_";
+const std::string FILE_NAME_SUFFIX = ".txt";
 
 
 
@@ -76,16 +81,12 @@ public:
 
 
 
-
-
 };
 
 
 
 
-
-
-#define NAZWA_PLIKU "log_file.txt"
+//#define NAZWA_PLIKU "log_file.txt"
 #define SEPARATOR "|=========================================================================================|"
 #define PRZESTRZEN"|                                                                                         |"
 #define NAZWA     "|                                PLIK Z GODZINAMI                                         |"
@@ -143,6 +144,7 @@ private:
     ifstream fin_warehouse;
     streampos pos;
     string nazwapliku;
+    string default_path;
 
     TimeWorkingInfo *time_info;
 
@@ -192,6 +194,8 @@ private:
     void createMinimalizeToTry(void);
     bool engineApp(bool sel);
     bool fileExists(const char *str);
+    string getUserName() const;
+    void setUserDefinedPath();
 
 
     void zapiszPierwszeWlaczenie(QDateTime date_time);
@@ -214,8 +218,7 @@ public slots:
 
 
     void saveData(void);
-//    void on_pushButton_clicked(void);
-//    void on_pushButton_2_clicked(void);
+    void on_manual_time_chaged(bool x);
     void on_refreshGui();
 
 
