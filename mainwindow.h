@@ -15,7 +15,9 @@
 #include <QStandardPaths>
 #include <QDesktopServices>
 #include <QStandardPaths>
+#include <QSound>
 #include <QDir>
+#include <QCloseEvent>
 #include <fstream>
 #include <iostream>
 #include <stdio.h>
@@ -32,6 +34,10 @@
 #include <QGuiApplication>
 #include <QString>
 
+
+
+const QString WLACZENIE_APLIKACJI = "uruchomiona_aplikacja";
+
 const QString GRUPA_USTAWIEN = "settings_first_fun_group";
 const QString PIERWSZE_WLACZENIE_KOMPUTERA = "first_tun_date_and_time";
 const QString DZIEN_OSTATNIEJ_MODYFIKACJI = "last_moydifed_date_and_time";
@@ -42,6 +48,12 @@ const QString PATH_TO_SAVE_FILE = "path_to_save_log";
 
 const std::string FILE_NAME_PREFIX = "CzasPracy_";
 const std::string FILE_NAME_SUFFIX = ".txt";
+
+const int ILOSC_GODZIN_PRACY = 8;
+
+const QTime CZAS_WEJSCIE_WLACZENIE_KOMP =  QTime(0,2,30);
+const QTime CZAS_WEJSCIE_NA_ZAKLAD_WLACZENIE_KOMP =  QTime(0,6,20);
+const QTime CZAS_PRACY = QTime(ILOSC_GODZIN_PRACY,0,0);
 
 
 
@@ -79,6 +91,7 @@ public:
     QTime odejmij_czasy(QTime x, QTime y);
     QTime dodaj_czasy(QTime x, QTime y);
 
+    QTime odejmij(QTime x, QTime y);
 
 
 };
@@ -164,6 +177,9 @@ private:
     QTime time_sec;
     QTimer *refresh_gui_timer;
 
+    QSound *alarm;
+    bool let_to_alarm_enter;
+
     QDateTime *last_turnoff_computer_time;
     QTime *last_working_time;
     bool was_modyfied;
@@ -171,6 +187,7 @@ private:
     QDateTime *last_date_time;
     QSystemTrayIcon *icon;
     QMenu *menu;
+    QAction *hide_window;
     QAction *restore;
     QAction *quitAction;
 
@@ -196,6 +213,8 @@ private:
     bool fileExists(const char *str);
     string getUserName() const;
     void setUserDefinedPath();
+    bool controlAppRun();
+    void restoreDefault();
 
 
     void zapiszPierwszeWlaczenie(QDateTime date_time);

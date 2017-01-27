@@ -3,6 +3,7 @@
 #include <iostream>
 #include <stdio.h>
 
+
 using namespace std;
 
 
@@ -13,7 +14,7 @@ MainWindow::MainWindow(QWidget *parent) :
 {
 
 
-
+    //controlAppRun();
 
 
     ui->setupUi(this);
@@ -25,21 +26,17 @@ MainWindow::MainWindow(QWidget *parent) :
     UstawZegar();
 
 
+    let_to_alarm_enter = true;
+    alarm = new QSound(":/new/prefix1/syrena.wav");
 
-    //setUserDefinedPath();
-    //QDir::setCurrent(QString::fromStdString(default_path));
-//    nazwapliku.append(default_path);
-//    nazwapliku.append("/");
+
 
     nazwapliku.append( FILE_NAME_PREFIX+getUserName()+FILE_NAME_SUFFIX);
     qDebug() << QString::fromStdString(nazwapliku);
 
     this->hide();
-    restore->setEnabled(true);
+    //restore->setEnabled(true);
 
-    this->setFixedSize(426,336);
-    this->setVisible(false);
-    this->hide();
 
     refresh_gui_timer->start(timer_period_ms);
 
@@ -51,6 +48,14 @@ MainWindow::MainWindow(QWidget *parent) :
     connect( qApp, SIGNAL( aboutToQuit()),this,SLOT(saveData()));
     connect(ui->pushButton, SIGNAL(clicked(bool)),this,SLOT(on_manual_time_chaged(bool)));
     connect(refresh_gui_timer, SIGNAL(timeout()), this, SLOT(on_refreshGui()));
+
+
+    this->setFixedSize(426,336);
+    this->hide();
+   // this->setVisible(false);
+
+
+
 }
 
 
@@ -58,13 +63,43 @@ MainWindow::MainWindow(QWidget *parent) :
 
 MainWindow::~MainWindow()
 {
-    delete dateEdit;
-    delete calendarWidget;
+
     delete icon;
     delete menu;
     delete restore;
     delete quitAction;
     delete ui;
+}
+
+
+bool MainWindow::controlAppRun(){
+
+    bool app;
+    QString m_sSettingsFile = QApplication::applicationDirPath()/*.left(1)*/ + "/settings.ini";
+    QSettings settings(m_sSettingsFile,QSettings::NativeFormat);    // qt linux format
+    settings.beginGroup( GRUPA_USTAWIEN);
+    app = settings.value(WLACZENIE_APLIKACJI, false).toBool();
+
+    if(app == true){
+         exit(EXIT_FAILURE);
+        //his->close();
+    }else {
+         ;
+        settings.setValue(WLACZENIE_APLIKACJI, true);
+    }
+    settings.endGroup();
+}
+
+void MainWindow::restoreDefault(){
+
+    qDebug() << "restoreDefault()";
+    bool app;
+    QString m_sSettingsFile = QApplication::applicationDirPath()/*.left(1)*/ + "/settings.ini";
+    QSettings settings(m_sSettingsFile,QSettings::NativeFormat);    // qt linux format
+    settings.beginGroup( GRUPA_USTAWIEN);
+    settings.setValue(WLACZENIE_APLIKACJI, false);
+    settings.endGroup();
+
 }
 
 
@@ -75,8 +110,6 @@ void MainWindow::setUserDefinedPath(){
     qDebug() << temp_qstr;*/
 
     default_path = temp_qstr.toStdString();
-
-
 
 
 
@@ -103,11 +136,20 @@ void MainWindow::on_refreshGui(){
 
     ui->label->setText("Czas pierwszego włączenia komputera: "+time_info->getWlaczenieKomputera().toString("hh:mm:ss"));
     ui->label_5->setText("Czas pracy komputera: "+ time_info->getCzasPracyKomputera().toString("hh:mm:ss"));
-    ui->label_2->setText("Oszacowany czas przybycia do pracy: "+ time_info->getCzasPrzebywaniaWpracy().toString("hh:mm:ss"));
-    ui->label_3->setText("Oszacowany czas wejścia na zakład: "+ time_info-> getCzasWejsciaNaZaklad().toString("hh:mm:ss"));
+    ui->label_2->setText("Oszacowany czas wejścia na CBR: "+ time_info->getCzasPrzebywaniaWpracy().toString("hh:mm:ss"));
+    ui->label_3->setText("Oszacowany czas wejścia na ZMT: "+ time_info-> getCzasWejsciaNaZaklad().toString("hh:mm:ss"));
     ui->label_4->setText("Rekomendowana godzina wyjścia z pracy: "+ time_info-> getCzasWyjsciaZPRacy().toString("hh:mm:ss"));
     QString format = "dddd, d MMMM yyyy";
     ui->label_6->setText(QDate::currentDate().toString(format) +", "+ QTime::currentTime().toString("hh:mm:ss"));
+
+
+    QTime temp_time_to_end = time_info->dodaj_czasy(time_info->getCzasPracyKomputera(), QTime(0,10,0));
+
+    if(temp_time_to_end > QTime(ILOSC_GODZIN_PRACY,0,0) && let_to_alarm_enter){
+        alarm->play();
+        let_to_alarm_enter = false;
+    }
+
 }
 
 
@@ -179,21 +221,34 @@ void MainWindow::createMinimalizeToTry(void)
     icon->show();
 
     menu = new QMenu(this);
+
+    hide_window = new QAction("Minimalizuj",this);
+    connect( hide_window,SIGNAL(triggered()),this,SLOT(hide()));
+
+
     quitAction = new QAction("Zamknij",this);
     connect(quitAction,SIGNAL(triggered()),this,SLOT(close()));
 
-    menu->addAction(quitAction);
-    icon->setContextMenu(menu);
+
+
     restore = new QAction("Przywróć", this);
-    restore->setEnabled(false);
     connect (restore, SIGNAL(triggered()), this, SLOT(showNormal()));
+
+   // restore->setEnabled(false);
+
+
+    menu->addAction(hide_window);
     menu->addAction(restore);
+    menu->addAction(quitAction);
+
+   icon->setContextMenu(menu);
 
 }
 void MainWindow::closeEvent(QCloseEvent *event)
 {
     //saveData();
-    QApplication::quit();
+    //QApplication::quit();
+  //  event->ignore();
 }
 
 
@@ -331,6 +386,11 @@ bool MainWindow::engineApp(bool sel)
             fout <<"\n";
         }
     }
+
+   // restoreDefault();
+
+
+
 }
 
 void MainWindow::zapiszPierwszeWlaczenie(QDateTime   date_time){
@@ -394,7 +454,7 @@ void MainWindow::on_manual_time_chaged(bool x){
     qDebug() << "on_manual_time_chaged";
     if (QMessageBox::question(this, "Czy zmienić godzinę?",
                       "Napewno chcesz wprowadzić datę manualnie ?") == QMessageBox::Yes){
-       time_info->setWlaczenieKomputera(ui->timeEdit->time());
+       time_info->setWlaczenieKomputera(time_info->dodaj_czasy(ui->timeEdit->time(), CZAS_WEJSCIE_WLACZENIE_KOMP));
     }
 
 }
@@ -428,15 +488,17 @@ QTime TimeWorkingInfo::getCzasPracyKomputera(){
 }
 
 QTime TimeWorkingInfo::getCzasPrzebywaniaWpracy() {
-    czas_przyjscia_do_pracy = QTime(dodaj_czasy(czas_wlaczenie_komputera, QTime(0,1,25))); //dodac dobry czas;
+   // czas_przyjscia_do_pracy = QTime(dodaj_czasy(czas_wlaczenie_komputera, QTime(0,2,30))); //dodac dobry czas;
+     czas_przyjscia_do_pracy = QTime(odejmij(czas_wlaczenie_komputera, CZAS_WEJSCIE_WLACZENIE_KOMP)); //dodac dobry czas;
     return czas_przyjscia_do_pracy;
 }
 QTime TimeWorkingInfo::getCzasWejsciaNaZaklad(){
-    czas_wejsca_na_zaklad = QTime(dodaj_czasy(czas_wlaczenie_komputera, QTime(0,5,10))); //dodac dobry czas
+    //czas_wejsca_na_zaklad = QTime(dodaj_czasy(czas_wlaczenie_komputera, QTime(0,4,0))); //dodac dobry czas
+    czas_wejsca_na_zaklad = QTime(odejmij(czas_wlaczenie_komputera, CZAS_WEJSCIE_NA_ZAKLAD_WLACZENIE_KOMP)); //dodac dobry czas
     return czas_wejsca_na_zaklad;
 }
 QTime TimeWorkingInfo::getCzasWyjsciaZPRacy(){
-    czas_opuszczenia_zakladu = QTime(dodaj_czasy(czas_przyjscia_do_pracy, QTime(8,0,0)));
+    czas_opuszczenia_zakladu = QTime(dodaj_czasy(czas_przyjscia_do_pracy, CZAS_PRACY));
     return czas_opuszczenia_zakladu;
 }
 
@@ -459,4 +521,21 @@ QTime TimeWorkingInfo::dodaj_czasy(QTime x, QTime y){
 
 
 }
+
+QTime TimeWorkingInfo::odejmij(QTime x, QTime y){
+
+    long x_total_in_sek = x.second() + (x.minute() * 60)+ (x.hour() * 3600 );
+    long y_total_in_sek = y.second() + (y.minute() * 60)+ (y.hour() * 3600 );
+    int xtemp = 0;
+
+    xtemp = x_total_in_sek - y_total_in_sek;
+
+    x = QTime(0,0,0);
+
+
+    return QTime(x.addSecs((int)xtemp));
+
+
+}
+
 

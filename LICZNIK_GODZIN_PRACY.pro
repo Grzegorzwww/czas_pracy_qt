@@ -8,6 +8,8 @@ QT       += core gui
 
 QT += gui
 
+QT += multimedia
+
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = LICZNIK_GODZIN_PRACY
@@ -20,3 +22,8 @@ SOURCES += main.cpp\
 HEADERS  += mainwindow.h
 
 FORMS    += mainwindow.ui
+
+
+
+RESOURCES += \
+    syrena.qrc
