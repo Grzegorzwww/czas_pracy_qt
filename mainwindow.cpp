@@ -18,23 +18,16 @@ MainWindow::MainWindow(QWidget *parent) :
     refresh_gui_timer = new QTimer(this);
     time_info = new TimeWorkingInfo();
 
-
     createMinimalizeToTry();
-
-
     UstawZegar();
-
     nazwapliku = "log_file.txt";
-
     this->hide();
     restore->setEnabled(true);
-
 
     this->setFixedSize(426,336);
     this->hide();
     this->setVisible(false);
     refresh_gui_timer->start(timer_period_ms);
-
 
     zapiszPierwszeWlaczenie(QDateTime::currentDateTime());
 
@@ -65,38 +58,6 @@ void MainWindow::on_refreshGui(){
 }
 
 
-void MainWindow::compessFreeTimes(QDateTime first, QDateTime second ){
-
-
-
-    if(first < second){
-        //        qDebug() << "first < second - ok";
-        if((first.addDays(1) != second)){
-            //            qDebug() << "first.addDays(1) != second";
-            first.addDays(1);
-            //                 qDebug() << "first.toString()"  << first.toString();
-            //                 qDebug() << "second.toString()" << second.toString();
-            second = second.addDays(-1);
-            first = first.addDays(1);
-
-            while(first < second)
-            {
-                fout <<"|"<<compensText(first.date().toString().trimmed().toStdString(), 21, 1);
-                fout <<"|"<<compensText("-", 20, 11);
-                fout <<"|"<<compensText("-", 21, 12);
-                fout <<"|"<<compensText("WOLNE", 22, 9);
-                fout <<"|";
-                fout <<"\n";
-                //qDebug() << first.toString();
-                first = first.addDays(1);
-            }
-        }
-    }
-}
-
-
-
-
 
 
 void MainWindow::UstawZegar(void)
@@ -124,7 +85,6 @@ void MainWindow::otworzPlik(const char *nazwapliku)
 void MainWindow::saveData(void)
 {
     qDebug() << "save data..." << endl;
-
     if(fileExists(("log_file.txt"))){
         qDebug() << "ISTNIEJE" << endl;
         otworzPlik("log_file.txt");
@@ -136,7 +96,6 @@ void MainWindow::saveData(void)
         otworzPlik("log_file.txt");
         engineApp(false);
     }
-
 }
 
 bool MainWindow::fileExists(const char *str)
@@ -252,6 +211,37 @@ bool MainWindow::modyfiLastRecordInFile(string filme_name, string str_to_modify)
 }
 
 
+void MainWindow::compessFreeTimes(QDateTime first, QDateTime second ){
+
+    if(first < second){
+        //        qDebug() << "first < second - ok";
+        if((first.addDays(1) != second)){
+            //            qDebug() << "first.addDays(1) != second";
+            first.addDays(1);
+                             qDebug() << "first.toString()"  << first.toString();
+                             qDebug() << "second.toString()" << second.toString();
+            second = second.addDays(-1);
+            first = first.addDays(1);
+            second = second.addDays(1);
+
+            while(first < second)
+            {
+                fout <<"|"<<compensText(first.date().toString().trimmed().toStdString(), 23, 1);
+                fout <<"|"<<compensText("-", 20, 11);
+                fout <<"|"<<compensText("-", 21, 12);
+                fout <<"|"<<compensText("WOLNE", 22, 9);
+                fout <<"|";
+                fout <<"\n";
+                qDebug() << first.toString();
+                first = first.addDays(1);
+            }
+        }
+    }
+}
+
+
+
+
 bool MainWindow::engineApp(bool sel)
 {
 
@@ -270,7 +260,7 @@ bool MainWindow::engineApp(bool sel)
         if(was_modyfied){
             qDebug() <<"kolejne zapisanie";
             string temp_str;
-            temp_str =  temp_str + "|" + compensText(temp.date().toString().trimmed().toStdString(), 24, 1);
+            temp_str =  temp_str + "|" + compensText(temp.date().toString().trimmed().toStdString(), 23, 2);
             temp_str =  temp_str + "|"+compensText(temp.time().toString().trimmed().toStdString(), 20, 7);
             temp_str =  temp_str +  "|"+compensText(QDateTime::currentDateTime().time().toString().trimmed().toStdString(), 21, 7);
             QTime temp_time = time_info->odejmij_czasy(temp.time(), QDateTime::currentDateTime().time());
@@ -283,7 +273,7 @@ bool MainWindow::engineApp(bool sel)
         }else
         {
             qDebug() <<"pierwsze zapisanie";
-            fout <<"|"<<compensText(temp.date().toString().trimmed().toStdString(), 22, 1);
+            fout <<"|"<<compensText(temp.date().toString().trimmed().toStdString(), 23, 2);
             fout <<"|"<<compensText(temp.time().toString().trimmed().toStdString(), 20, 7);
             fout <<"|"<<compensText(QDateTime::currentDateTime().time().toString().trimmed().toStdString(), 21, 7);
             QTime temp_time = time_info->odejmij_czasy(temp.time(), QDateTime::currentDateTime().time());
