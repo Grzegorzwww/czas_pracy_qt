@@ -15,6 +15,7 @@
 #include <QStandardPaths>
 #include <QDesktopServices>
 #include <QStandardPaths>
+#include <QInputDialog>
 #include <QSound>
 #include <QDir>
 #include <QCloseEvent>
@@ -33,6 +34,7 @@
 #include <QPainter>
 #include <QGuiApplication>
 #include <QString>
+
 
 
 
@@ -61,7 +63,7 @@ const QTime CZAS_PRACY = QTime(ILOSC_GODZIN_PRACY,0,0);
 class TimeWorkingInfo
 {
 private:
-
+    QTime system_uptime;
     QTime czas_wlaczenie_komputera;
     QTime czas_pracy_komputera;
     QElapsedTimer czas_pracy;
@@ -92,6 +94,7 @@ public:
     QTime dodaj_czasy(QTime x, QTime y);
 
     QTime odejmij(QTime x, QTime y);
+    QTime readLinuxSystemTime();
 
 
 };
@@ -177,6 +180,9 @@ private:
     QTime time_sec;
     QTimer *refresh_gui_timer;
 
+    QTime *time_cbr_computer_delay;
+    QTime *time_zmt_computer_delay;
+
     QSound *alarm;
     bool let_to_alarm_enter;
 
@@ -187,9 +193,13 @@ private:
     QDateTime *last_date_time;
     QSystemTrayIcon *icon;
     QMenu *menu;
+    QMenu *enter_times_menu;
     QAction *hide_window;
     QAction *restore;
     QAction *quitAction;
+
+     QAction *enterCBRTimeAction;
+     QAction *enterZMTTimeAction;
 
 
     QDateEdit *dateEdit = new QDateEdit;
@@ -230,7 +240,11 @@ private:
 
 
 
-
+private slots:
+    void on_activated(QSystemTrayIcon::ActivationReason reason);
+    void on_close();
+    void on_enterCBRTimeAction();
+    void on_enterZMTTimeAction();
 
 public slots:
 
@@ -239,6 +253,7 @@ public slots:
     void saveData(void);
     void on_manual_time_chaged(bool x);
     void on_refreshGui();
+
 
 
 
