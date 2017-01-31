@@ -21,12 +21,12 @@ MainWindow::MainWindow(QWidget *parent) :
     UstawZegar();
 
 
-
     let_to_alarm_enter = true;
     alarm = new QSound(":/new/prefix1/syrena.wav");
 
-    time_cbr_computer_delay = new QTime(0,0,0);
-    time_zmt_computer_delay = new QTime(0,0,0);
+
+
+    controlDelayTime();
 
     nazwapliku.append( FILE_NAME_PREFIX+getUserName()+FILE_NAME_SUFFIX);
     qDebug() << QString::fromStdString(nazwapliku);
@@ -44,9 +44,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     this->setFixedSize(426,336);
     hide();
-
 }
-
 
 MainWindow::~MainWindow()
 {
@@ -56,7 +54,6 @@ MainWindow::~MainWindow()
     delete quitAction;
     delete ui;
 }
-
 
 
 
@@ -267,27 +264,59 @@ void MainWindow::on_enterCBRTimeAction(){
                                                   "", &ok);
     if (ok && !temp_time_str.isEmpty()){
         QTime::fromString(temp_time_str, "hh,mm,ss").toString();
-        *time_cbr_computer_delay = QTime::fromString(temp_time_str , "hh,mm,ss");
+        time_info->setTimeCbrComp( QTime::fromString(temp_time_str , "hh,mm,ss"));
+        if(time_info->getTimeCbrComp() > QTime(0,0,1)){
+        QString m_sSettingsFile = QApplication::applicationDirPath()/*.left(1)*/ + "/settings.ini";
+        QSettings settings(m_sSettingsFile,QSettings::NativeFormat);    // qt linux format
+        settings.beginGroup( GRUPA_USTAWIEN);
+            settings.setValue(TIME_CBR_COMP_DELAY, time_info->getTimeCbrComp());
+            settings.setValue(FLAG_CBR_COMP_DELAY, true);
+        settings.endGroup();
+        }
     }
-
     qDebug() <<temp_time_str;
-    qDebug() << time_cbr_computer_delay->toString();
+
 
 }
 void MainWindow::on_enterZMTTimeAction(){
-
     bool ok;
     QString temp_time_str = QInputDialog::getText(this, "Podaj czas ZMT->KOMPUTER ",
                                                   tr("Podaj czas (format: hh,mm,ss): "), QLineEdit::Normal,
                                                   "", &ok);
     if (ok && !temp_time_str.isEmpty()){
         QTime::fromString(temp_time_str, "hh,mm,ss").toString();
-        *time_zmt_computer_delay = QTime::fromString(temp_time_str , "hh,mm,ss");
+        time_info->setTimeZmtComp(QTime::fromString(temp_time_str , "hh,mm,ss"));
+        if(time_info->getTimeZmtComp() > QTime(0,0,1)){
+        QString m_sSettingsFile = QApplication::applicationDirPath()/*.left(1)*/ + "/settings.ini";
+        QSettings settings(m_sSettingsFile,QSettings::NativeFormat);    // qt linux format
+        settings.beginGroup( GRUPA_USTAWIEN);
+            settings.setValue(TIME_ZMT_COMP_DELAY, time_info->getTimeZmtComp());
+            settings.setValue(FLAG_ZMT_COMP_DELAY, true);
+        settings.endGroup();
+        }
     }
-
     qDebug() <<temp_time_str;
-    qDebug() << time_zmt_computer_delay->toString();
 
+}
+
+
+void MainWindow::controlDelayTime(){
+
+    bool cbr_flag = false;
+    bool zmt_flag = false;
+
+    QString m_sSettingsFile = QApplication::applicationDirPath()/*.left(1)*/ + "/settings.ini";
+    QSettings settings(m_sSettingsFile,QSettings::NativeFormat);    // qt linux format
+    settings.beginGroup( GRUPA_USTAWIEN);
+    cbr_flag = settings.value(FLAG_CBR_COMP_DELAY, false).toBool();
+    if(cbr_flag){
+        time_info->setTimeCbrComp(settings.value(TIME_CBR_COMP_DELAY, CZAS_WEJSCIE_WLACZENIE_KOMP).toTime());
+    }
+    zmt_flag = settings.value(FLAG_ZMT_COMP_DELAY, false).toBool();
+    if(zmt_flag){
+        time_info->setTimeZmtComp( settings.value(TIME_ZMT_COMP_DELAY, CZAS_WEJSCIE_NA_ZAKLAD_WLACZENIE_KOMP).toTime());
+    }
+    settings.endGroup();
 }
 
 
@@ -501,6 +530,10 @@ TimeWorkingInfo::TimeWorkingInfo() {
     czas_przyjscia_do_pracy = QTime(0, 0,0);
     czas_wejsca_na_zaklad = QTime(0, 0,0);
     czas_opuszczenia_zakladu = QTime(0, 0,0);
+
+
+    time_cbr_computer_delay =  QTime(CZAS_WEJSCIE_WLACZENIE_KOMP);
+    time_zmt_computer_delay =  QTime(CZAS_WEJSCIE_NA_ZAKLAD_WLACZENIE_KOMP);
 }
 
 QTime TimeWorkingInfo::getCzasPracyKomputera(){
@@ -510,12 +543,12 @@ QTime TimeWorkingInfo::getCzasPracyKomputera(){
 
 QTime TimeWorkingInfo::getCzasPrzebywaniaWpracy() {
    // czas_przyjscia_do_pracy = QTime(dodaj_czasy(czas_wlaczenie_komputera, QTime(0,2,30))); //dodac dobry czas;
-     czas_przyjscia_do_pracy = QTime(odejmij(czas_wlaczenie_komputera, CZAS_WEJSCIE_WLACZENIE_KOMP)); //dodac dobry czas;
+     czas_przyjscia_do_pracy = QTime(odejmij(czas_wlaczenie_komputera, time_cbr_computer_delay)); //dodac dobry czas;
     return czas_przyjscia_do_pracy;
 }
 QTime TimeWorkingInfo::getCzasWejsciaNaZaklad(){
     //czas_wejsca_na_zaklad = QTime(dodaj_czasy(czas_wlaczenie_komputera, QTime(0,4,0))); //dodac dobry czas
-    czas_wejsca_na_zaklad = QTime(odejmij(czas_wlaczenie_komputera, CZAS_WEJSCIE_NA_ZAKLAD_WLACZENIE_KOMP)); //dodac dobry czas
+    czas_wejsca_na_zaklad = QTime(odejmij(czas_wlaczenie_komputera, time_zmt_computer_delay)); //dodac dobry czas
     return czas_wejsca_na_zaklad;
 }
 QTime TimeWorkingInfo::getCzasWyjsciaZPRacy(){

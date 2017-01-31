@@ -48,13 +48,21 @@ const QString OSTATNIE_WYLACZENIE_KOMPUTERA = "last_turnoff_computer_time";
 const QString FLAG_TO_LET_USE_PATH = "flag_to_let_use_path";
 const QString PATH_TO_SAVE_FILE = "path_to_save_log";
 
+const QString TIME_CBR_COMP_DELAY = "time_cbr_comp_delay";
+const QString FLAG_CBR_COMP_DELAY = "flag_cbr_comp_delay";
+const QString TIME_ZMT_COMP_DELAY = "time_zmt_comp_delay";
+const QString FLAG_ZMT_COMP_DELAY = "flag_zmt_comp_delay";
+
+
+
+
 const std::string FILE_NAME_PREFIX = "CzasPracy_";
 const std::string FILE_NAME_SUFFIX = ".txt";
 
 const int ILOSC_GODZIN_PRACY = 8;
 
-const QTime CZAS_WEJSCIE_WLACZENIE_KOMP =  QTime(0,2,30);
-const QTime CZAS_WEJSCIE_NA_ZAKLAD_WLACZENIE_KOMP =  QTime(0,6,20);
+const QTime CZAS_WEJSCIE_WLACZENIE_KOMP =  QTime(0,2,0);
+const QTime CZAS_WEJSCIE_NA_ZAKLAD_WLACZENIE_KOMP =  QTime(0,5,40);
 const QTime CZAS_PRACY = QTime(ILOSC_GODZIN_PRACY,0,0);
 
 
@@ -72,6 +80,9 @@ private:
     QTime czas_opuszczenia_zakladu;
     QString time_format;
 
+    QTime time_cbr_computer_delay;
+    QTime time_zmt_computer_delay;
+
 
 
 
@@ -81,6 +92,13 @@ public:
 
     void setWlaczenieKomputera(const QTime & x) {czas_wlaczenie_komputera = x;}
     void setToCzasPracyKomputera(const QTime & x) {czas_pracy_komputera = x;}
+
+    void setTimeCbrComp(QTime  t) {time_cbr_computer_delay = t;}
+    void setTimeZmtComp(QTime  t) {time_zmt_computer_delay = t;}
+
+    QTime getTimeCbrComp() {return  time_cbr_computer_delay ;}
+    QTime getTimeZmtComp() {return  time_zmt_computer_delay ;}
+
 
     QTime getWlaczenieKomputera() {return czas_wlaczenie_komputera;}
     void setTimeFormat(const QString str) {time_format = str;}
@@ -180,8 +198,7 @@ private:
     QTime time_sec;
     QTimer *refresh_gui_timer;
 
-    QTime *time_cbr_computer_delay;
-    QTime *time_zmt_computer_delay;
+
 
     QSound *alarm;
     bool let_to_alarm_enter;
@@ -232,6 +249,7 @@ private:
     string compensText(string text, int total_space, int ofset);
     void compessFreeTimes(QDateTime first, QDateTime second );
 
+    void controlDelayTime();
 
     void changeEvent(QEvent *e);
     void closeEvent(QCloseEvent *event);
