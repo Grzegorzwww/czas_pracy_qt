@@ -44,6 +44,10 @@ const QString GRUPA_USTAWIEN = "settings_first_fun_group";
 const QString PIERWSZE_WLACZENIE_KOMPUTERA = "first_tun_date_and_time";
 const QString DZIEN_OSTATNIEJ_MODYFIKACJI = "last_moydifed_date_and_time";
 const QString OSTATNIE_WYLACZENIE_KOMPUTERA = "last_turnoff_computer_time";
+const QString PIERWSZE_WLACZENIE_APLIKACJI = "app_first_run";
+const QString PRZYPOMNIENIE_O_ERP = "erp_reminder";
+
+
 
 const QString FLAG_TO_LET_USE_PATH = "flag_to_let_use_path";
 const QString PATH_TO_SAVE_FILE = "path_to_save_log";
@@ -52,8 +56,6 @@ const QString TIME_CBR_COMP_DELAY = "time_cbr_comp_delay";
 const QString FLAG_CBR_COMP_DELAY = "flag_cbr_comp_delay";
 const QString TIME_ZMT_COMP_DELAY = "time_zmt_comp_delay";
 const QString FLAG_ZMT_COMP_DELAY = "flag_zmt_comp_delay";
-
-
 
 
 const std::string FILE_NAME_PREFIX = "CzasPracy_";
@@ -130,8 +132,6 @@ public:
 
 
 
-
-
 #define PON 1
 #define WT 2
 #define SR 3
@@ -202,6 +202,7 @@ private:
 
     QSound *alarm;
     bool let_to_alarm_enter;
+    bool let_to_display_erp_alert;
 
     QDateTime *last_turnoff_computer_time;
     QTime *last_working_time;
@@ -217,7 +218,7 @@ private:
 
      QAction *enterCBRTimeAction;
      QAction *enterZMTTimeAction;
-
+    QAction *setPathToSaveFile;
 
     QDateEdit *dateEdit = new QDateEdit;
     QCalendarWidget *calendarWidget = new QCalendarWidget();
@@ -231,7 +232,7 @@ private:
     int SprawdzIloscWierszy(FILE *PLIK);
     void UstawNaKoniec(FILE *PLIK);
     int ZapiszWiersz(FILE *PLIK, char *tab);
-    void UstawZegar(void);
+    void checkAplicationFirstRun(void);
     void uworzPlik(const char *nazwapliku);
     void otworzPlik(const char *nazwapliku);
     bool isOpenfirst(FILE *plik);
@@ -241,7 +242,7 @@ private:
     string getUserName() const;
     void setUserDefinedPath();
     bool controlAppRun();
-    void restoreDefault();
+
 
 
     void zapiszPierwszeWlaczenie(QDateTime date_time);
@@ -255,6 +256,7 @@ private:
     void closeEvent(QCloseEvent *event);
 
     bool modyfiLastRecordInFile(string filme_name, string str_to_modify);
+    void check_checkbox_state();
 
 
 
@@ -263,6 +265,8 @@ private slots:
     void on_close();
     void on_enterCBRTimeAction();
     void on_enterZMTTimeAction();
+    void on_setNewPathToSaveFile();
+    void on_erp_reminder(bool x);
 
 public slots:
 

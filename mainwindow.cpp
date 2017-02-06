@@ -3,6 +3,8 @@
 #include <iostream>
 #include <stdio.h>
 
+#include <QFileDialog>
+
 
 using namespace std;
 
@@ -18,19 +20,22 @@ MainWindow::MainWindow(QWidget *parent) :
     time_info = new TimeWorkingInfo();
 
     createMinimalizeToTry();
-    UstawZegar();
 
+
+    ui->checkBox_2->setChecked(true);
 
     let_to_alarm_enter = true;
-    alarm = new QSound(":/new/prefix1/syrena.wav");
-
+    let_to_display_erp_alert = true;
 
 
     controlDelayTime();
 
-    nazwapliku.append( FILE_NAME_PREFIX+getUserName()+FILE_NAME_SUFFIX);
-    qDebug() << QString::fromStdString(nazwapliku);
 
+    check_checkbox_state();
+
+
+    //nazwapliku.append(FILE_NAME_PREFIX+getUserName()+FILE_NAME_SUFFIX);
+    //qDebug() << QString::fromStdString(nazwapliku);
 
     refresh_gui_timer->start(timer_period_ms);
     zapiszPierwszeWlaczenie(QDateTime::currentDateTime() );
@@ -39,6 +44,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect( qApp, SIGNAL( aboutToQuit()),this,SLOT(saveData()));
     connect(ui->pushButton, SIGNAL(clicked(bool)),this,SLOT(on_manual_time_chaged(bool)));
     connect(refresh_gui_timer, SIGNAL(timeout()), this, SLOT(on_refreshGui()));
+    connect(ui->checkBox_2, SIGNAL(clicked(bool)), this, SLOT(on_erp_reminder(bool )));
 
     connect(icon, SIGNAL(activated(QSystemTrayIcon::ActivationReason)), this, SLOT(on_activated(QSystemTrayIcon::ActivationReason)));
 
@@ -56,11 +62,11 @@ MainWindow::~MainWindow()
 }
 
 
-
 bool MainWindow::controlAppRun(){
     bool app;
-    QString m_sSettingsFile = QApplication::applicationDirPath()/*.left(1)*/ + "/settings.ini";
-    QSettings settings(m_sSettingsFile,QSettings::NativeFormat);    // qt linux format
+
+
+    QSettings settings;
     settings.beginGroup( GRUPA_USTAWIEN);
     app = settings.value(WLACZENIE_APLIKACJI, false).toBool();
 
@@ -73,17 +79,6 @@ bool MainWindow::controlAppRun(){
     settings.endGroup();
 }
 
-void MainWindow::restoreDefault(){
-
-    qDebug() << "restoreDefault()";
-    bool app;
-    QString m_sSettingsFile = QApplication::applicationDirPath()/*.left(1)*/ + "/settings.ini";
-    QSettings settings(m_sSettingsFile,QSettings::NativeFormat);    // qt linux format
-    settings.beginGroup( GRUPA_USTAWIEN);
-    settings.setValue(WLACZENIE_APLIKACJI, false);
-    settings.endGroup();
-
-}
 
 
 void MainWindow::setUserDefinedPath(){
@@ -93,8 +88,7 @@ void MainWindow::setUserDefinedPath(){
 
     qDebug() << QString::fromStdString(default_path);
 
-    QString m_sSettingsFile = QApplication::applicationDirPath()/*.left(1)*/ + "/settings.ini";
-    QSettings settings(m_sSettingsFile,QSettings::NativeFormat);    // qt linux format
+    QSettings settings;
     settings.beginGroup( GRUPA_USTAWIEN);
     bool flag = settings.value(FLAG_TO_LET_USE_PATH, false).toBool();
 
@@ -129,20 +123,64 @@ void MainWindow::on_refreshGui(){
     icon->setToolTip(icon_tool_tip_str);
 
 
-
-
     ui->label_6->setText(QDate::currentDate().toString(format) +", "+ QTime::currentTime().toString("hh:mm:ss"));
     QTime temp_time_to_end = time_info->dodaj_czasy(time_info->getCzasPracyKomputera(), QTime(0,10,0));
     if(temp_time_to_end > QTime(ILOSC_GODZIN_PRACY,0,0) && let_to_alarm_enter){
-        alarm->play();
+         QSound::play(":/new/prefix1/syrena.wav");
         let_to_alarm_enter = false;
+    }
+
+    if(ui->checkBox_2->isChecked()){
+        if(QDateTime::currentDateTime().date().dayOfWeek() == 5) {
+            if(let_to_display_erp_alert && QTime::currentTime() > QTime(12,0,0)){
+                QSound::play(":/sms-alert-2-daniel_simon.wav");
+                QMessageBox::information( this, "Przypomnienie o ERPie", "Uzupełnij ERP'a !. \n"
+                                                                         ""
+                                                                         "", QMessageBox::Ok, 0 );
+                let_to_display_erp_alert = false;
+            }
+        }
     }
 }
 
 
-void MainWindow::UstawZegar(void)
+void MainWindow::checkAplicationFirstRun(void)
 {
 
+    bool app_first_run = false;
+    QSettings settings;
+
+    settings.beginGroup( GRUPA_USTAWIEN);
+    //settings.setValue(PIERWSZE_WLACZENIE_APLIKACJI);
+        app_first_run = settings.value(PIERWSZE_WLACZENIE_APLIKACJI, true).toBool();
+
+        if(app_first_run){
+            QString sciezka = QFileDialog::getExistingDirectory(
+                        this,
+                        tr("Gdzie zapisać plik z logami ?"),
+                        QDir::homePath());
+
+            qDebug() << "sciezka: " << sciezka;
+
+            nazwapliku.clear();
+            nazwapliku.append(sciezka.toStdString());
+            nazwapliku.append("/");
+            nazwapliku.append(FILE_NAME_PREFIX+getUserName()+FILE_NAME_SUFFIX);
+
+            settings.setValue(PATH_TO_SAVE_FILE, QString::fromStdString(nazwapliku));
+            settings.setValue(PIERWSZE_WLACZENIE_APLIKACJI, false);
+
+            qDebug() << QString::fromStdString(nazwapliku);
+        }
+        else {
+
+            nazwapliku.clear();
+            nazwapliku.append(settings.value(PATH_TO_SAVE_FILE, "log" ).toString().toStdString());
+            qDebug() << QString::fromStdString(nazwapliku);
+
+        }
+    settings.endGroup();
+  //  }
 }
 void MainWindow::uworzPlik(const char *nazwapliku)
 {
@@ -217,7 +255,13 @@ void MainWindow::createMinimalizeToTry(void)
     restore = new QAction("Przywróć", this);
     connect (restore, SIGNAL(triggered()), this, SLOT(showNormal()));
 
+     setPathToSaveFile  = new QAction("Ustaw nową scieżkę", this);
+     connect (setPathToSaveFile, SIGNAL(triggered()), this, SLOT(on_setNewPathToSaveFile()));
+
+
+
     menu->addMenu(enter_times_menu);
+    menu->addAction( setPathToSaveFile);
     menu->addAction(hide_window);
     menu->addAction(restore);
     menu->addAction(quitAction);
@@ -240,7 +284,6 @@ void MainWindow::createMinimalizeToTry(void)
 void MainWindow::on_activated(QSystemTrayIcon::ActivationReason reason){
 
     if(reason == QSystemTrayIcon::DoubleClick){
-        //qDebug() << isMinimized();
         if(this->isHidden())
         {
             show();
@@ -266,17 +309,13 @@ void MainWindow::on_enterCBRTimeAction(){
         QTime::fromString(temp_time_str, "hh,mm,ss").toString();
         time_info->setTimeCbrComp( QTime::fromString(temp_time_str , "hh,mm,ss"));
         if(time_info->getTimeCbrComp() > QTime(0,0,1)){
-        QString m_sSettingsFile = QApplication::applicationDirPath()/*.left(1)*/ + "/settings.ini";
-        QSettings settings(m_sSettingsFile,QSettings::NativeFormat);    // qt linux format
+        QSettings settings;
         settings.beginGroup( GRUPA_USTAWIEN);
             settings.setValue(TIME_CBR_COMP_DELAY, time_info->getTimeCbrComp());
             settings.setValue(FLAG_CBR_COMP_DELAY, true);
         settings.endGroup();
         }
     }
-    qDebug() <<temp_time_str;
-
-
 }
 void MainWindow::on_enterZMTTimeAction(){
     bool ok;
@@ -287,26 +326,77 @@ void MainWindow::on_enterZMTTimeAction(){
         QTime::fromString(temp_time_str, "hh,mm,ss").toString();
         time_info->setTimeZmtComp(QTime::fromString(temp_time_str , "hh,mm,ss"));
         if(time_info->getTimeZmtComp() > QTime(0,0,1)){
-        QString m_sSettingsFile = QApplication::applicationDirPath()/*.left(1)*/ + "/settings.ini";
-        QSettings settings(m_sSettingsFile,QSettings::NativeFormat);    // qt linux format
+       // QString m_sSettingsFile = QApplication::applicationDirPath()/*.left(1)*/ + "/settings.ini";
+        QSettings settings/*(m_sSettingsFile,QSettings::NativeFormat)*/;    // qt linux format
         settings.beginGroup( GRUPA_USTAWIEN);
             settings.setValue(TIME_ZMT_COMP_DELAY, time_info->getTimeZmtComp());
             settings.setValue(FLAG_ZMT_COMP_DELAY, true);
         settings.endGroup();
         }
     }
-    qDebug() <<temp_time_str;
+  
+}
+
+void MainWindow::on_setNewPathToSaveFile(){
+
+            QSettings settings;
+            settings.beginGroup( GRUPA_USTAWIEN);
+
+    QString sciezka = QFileDialog::getExistingDirectory(
+                this,
+                tr("Gdzie zapisać plik z logami ?"),
+                QDir::homePath());
+
+           qDebug() << "sciezka: " << sciezka;
+
+            nazwapliku.clear();
+            nazwapliku.append(sciezka.toStdString());
+            nazwapliku.append("/");
+            nazwapliku.append(FILE_NAME_PREFIX+getUserName()+FILE_NAME_SUFFIX);
+
+            settings.setValue(PATH_TO_SAVE_FILE, QString::fromStdString(nazwapliku));
+            settings.setValue(PIERWSZE_WLACZENIE_APLIKACJI, false);
+            qDebug() << QString::fromStdString(nazwapliku);
+             settings.endGroup();
 
 }
 
+
+void MainWindow::on_erp_reminder(bool x){
+
+    QSettings settings;
+    settings.beginGroup( GRUPA_USTAWIEN);
+    if(x){
+        settings.setValue(PRZYPOMNIENIE_O_ERP, true);
+        qDebug() <<"on_erp_reminder = true";
+
+    }else{
+        settings.setValue(PRZYPOMNIENIE_O_ERP, false);
+        qDebug() <<"on_erp_reminder = false";
+    }
+    settings.endGroup();
+}
+
+void MainWindow::check_checkbox_state(){
+
+    QSettings settings;
+    bool state;
+    settings.beginGroup( GRUPA_USTAWIEN);
+
+    state =  settings.value(PRZYPOMNIENIE_O_ERP, false).toBool();
+    if(state)
+        ui->checkBox_2->setChecked(true);
+    else
+        ui->checkBox_2->setChecked(false);
+    settings.endGroup();
+}
 
 void MainWindow::controlDelayTime(){
 
     bool cbr_flag = false;
     bool zmt_flag = false;
 
-    QString m_sSettingsFile = QApplication::applicationDirPath()/*.left(1)*/ + "/settings.ini";
-    QSettings settings(m_sSettingsFile,QSettings::NativeFormat);    // qt linux format
+    QSettings settings;
     settings.beginGroup( GRUPA_USTAWIEN);
     cbr_flag = settings.value(FLAG_CBR_COMP_DELAY, false).toBool();
     if(cbr_flag){
@@ -354,8 +444,14 @@ bool MainWindow::modyfiLastRecordInFile(string filme_name, string str_to_modify)
         cout << "Input file failed to open\n";
         return 1;
     }
+
     // now open temp output file
-    ofstream out("outfile.txt");
+    // string path
+
+    QString temp_str_name = QString::fromStdString(nazwapliku);
+    temp_str_name = temp_str_name.replace(QString::fromStdString(FILE_NAME_PREFIX+getUserName()+FILE_NAME_SUFFIX), "outfile.txt");
+    ofstream out(temp_str_name.toStdString());
+
     // loop to read/write the file.  Note that you need to add code here to check
     // if you want to write the line
     while( getline(in,line) ){
@@ -369,9 +465,10 @@ bool MainWindow::modyfiLastRecordInFile(string filme_name, string str_to_modify)
     in.close();
     out.close();
     // delete the original file
+
     remove(filme_name.c_str());
     // rename old to new
-    rename("outfile.txt",filme_name.c_str());
+    rename(temp_str_name.toStdString().c_str(),filme_name.c_str());
     // all done!
     return 0;
 }
@@ -393,7 +490,7 @@ void MainWindow::compessFreeTimes(QDateTime first, QDateTime second ){
                 fout <<"|"<<compensText("WOLNE", 22, 9);
                 fout <<"|";
                 fout <<"\n";
-                qDebug() << first.toString();
+               // qDebug() << first.toString();
                 first = first.addDays(1);
             }
         }
@@ -406,12 +503,14 @@ void MainWindow::compessFreeTimes(QDateTime first, QDateTime second ){
 bool MainWindow::engineApp(bool sel)
 {
 
-    if( QFileInfo("settings.ini").exists()){
+    QSettings settings;
+
+
+    if(QFile::exists(settings.fileName())){
+
         QString temp_str;
         compessFreeTimes(*last_date_time, QDateTime::currentDateTime());
 
-        QString m_sSettingsFile = QApplication::applicationDirPath()/*.left(1)*/ + "/settings.ini";
-        QSettings settings(m_sSettingsFile,QSettings::NativeFormat);    // qt linux format
         settings.beginGroup( GRUPA_USTAWIEN);
         QDateTime temp = settings.value(PIERWSZE_WLACZENIE_KOMPUTERA, 0).toDateTime();
         settings.setValue(DZIEN_OSTATNIEJ_MODYFIKACJI, QDateTime::currentDateTime());
@@ -447,18 +546,19 @@ bool MainWindow::engineApp(bool sel)
 
 void MainWindow::zapiszPierwszeWlaczenie(QDateTime   date_time){
 
-    QString m_sSettingsFile = QApplication::applicationDirPath()/*.left(1)*/ + "/settings.ini";
-    qDebug() << m_sSettingsFile;
-    QSettings settings(m_sSettingsFile,QSettings::NativeFormat);    // qt linux format
+
+    QSettings settings;
     settings.beginGroup(GRUPA_USTAWIEN);
 
-    if(odczytajPierwszeWlaczenie(QDateTime::currentDateTime()) || !QFileInfo("settings.ini").exists()){    // pierwsze wlaczenie
+
+
+
+    if(odczytajPierwszeWlaczenie(QDateTime::currentDateTime()) || (!QFile::exists(settings.fileName()))){    // pierwsze wlaczenie
         qDebug() << "wlaczenie - nowy dzien ";
+        checkAplicationFirstRun();
         date_time.setTime(time_info->odejmij(QTime::currentTime(), time_info->readLinuxSystemTime()));
         settings.setValue(PIERWSZE_WLACZENIE_KOMPUTERA, date_time);
         time_info->setWlaczenieKomputera(time_info->odejmij( QTime::currentTime(), time_info->readLinuxSystemTime()));
-        qDebug() << "time_info->odejmij = " << time_info->odejmij( date_time.time(), time_info->readLinuxSystemTime()).toString();
-        qDebug() <<  "QTime::currentTime(); = " << QTime::currentTime();
         was_modyfied = false;
 
     }
@@ -466,6 +566,8 @@ void MainWindow::zapiszPierwszeWlaczenie(QDateTime   date_time){
         qDebug() << "kolejne wlaczenie ";
         was_modyfied = true;
         time_info->setWlaczenieKomputera(settings.value(PIERWSZE_WLACZENIE_KOMPUTERA, QTime::currentTime()).toTime());
+        nazwapliku.clear();
+        nazwapliku.append(settings.value(PATH_TO_SAVE_FILE, "log" ).toString().toStdString());
 
     }
     settings.endGroup();
@@ -473,8 +575,10 @@ void MainWindow::zapiszPierwszeWlaczenie(QDateTime   date_time){
 
 bool MainWindow::odczytajPierwszeWlaczenie(QDateTime date_time){
 
-    QString m_sSettingsFile = QApplication::applicationDirPath()/*.left(1)*/ + "/settings.ini";
-    QSettings settings(m_sSettingsFile,QSettings::NativeFormat);    // qt linux format
+
+
+    QSettings settings/*(m_sSettingsFile,QSettings::NativeFormat)*/;    // qt linux format
+    qDebug() << settings.fileName();
 
     settings.beginGroup( GRUPA_USTAWIEN);
     QDateTime temp = settings.value(PIERWSZE_WLACZENIE_KOMPUTERA, QDateTime::currentDateTime()).toDateTime();
@@ -506,7 +610,7 @@ string MainWindow::compensText(string text, int total_space, int ofset){
 }
 
 void MainWindow::on_manual_time_chaged(bool x){
-    qDebug() << "on_manual_time_chaged";
+   // qDebug() << "on_manual_time_chaged";
     if (QMessageBox::question(this, "Czy zmienić godzinę?",
                       "Napewno chcesz wprowadzić datę manualnie ?") == QMessageBox::Yes){
        time_info->setWlaczenieKomputera(time_info->dodaj_czasy(ui->timeEdit->time(), CZAS_WEJSCIE_WLACZENIE_KOMP));
@@ -600,13 +704,12 @@ QTime TimeWorkingInfo::readLinuxSystemTime() {
             QTextStream in(&uptime);
             QString line = in.readLine();
             if(!line.isEmpty()){
-                qDebug() <<"line = "<< line;
+               // qDebug() <<"line = "<< line;
 
                 real_uptime = line.section(" ", 0, 0).trimmed().toDouble();
             }
             int int_real_uptime = (int)real_uptime;
             system_uptime = QTime(int_real_uptime / 3600 % 24, int_real_uptime / 60 % 60, int_real_uptime % 60);
-            qDebug() << "system_uptime = " << system_uptime.toString();
             return system_uptime;
         }
         else

@@ -16,6 +16,10 @@ using namespace std;
 int main(int argc, char *argv[])
 {
     QApplication::setDesktopSettingsAware(false);
+
+    QCoreApplication::setOrganizationName("grzegorz_warchol_rcp");
+    QCoreApplication::setApplicationName("mrcp");
+
     SingleApplication a(argc, argv);
     MainWindow w;
 

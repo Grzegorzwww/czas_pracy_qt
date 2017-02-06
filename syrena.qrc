@@ -2,4 +2,7 @@
     <qresource prefix="/new/prefix1">
         <file>syrena.wav</file>
     </qresource>
+    <qresource prefix="/">
+        <file>sms-alert-2-daniel_simon.wav</file>
+    </qresource>
 </RCC>
